@@ -41,6 +41,7 @@ static int ngx_http_lua_shdict_lpop(lua_State *L);
 static int ngx_http_lua_shdict_rpop(lua_State *L);
 static int ngx_http_lua_shdict_pop_helper(lua_State *L, int flags);
 static int ngx_http_lua_shdict_llen(lua_State *L);
+static int ngx_http_lua_shdict_get_stats(lua_State *L);
 
 
 static ngx_inline ngx_shm_zone_t *ngx_http_lua_shdict_get_zone(lua_State *L,
@@ -330,7 +331,7 @@ ngx_http_lua_inject_shdict_api(ngx_http_lua_main_conf_t *lmcf, lua_State *L)
         lua_createtable(L, 0, lmcf->shdict_zones->nelts /* nrec */);
                 /* ngx.shared */
 
-        lua_createtable(L, 0 /* narr */, 18 /* nrec */); /* shared mt */
+        lua_createtable(L, 0 /* narr */, 19 /* nrec */); /* shared mt */
 
         lua_pushcfunction(L, ngx_http_lua_shdict_get);
         lua_setfield(L, -2, "get");
@@ -382,6 +383,9 @@ ngx_http_lua_inject_shdict_api(ngx_http_lua_main_conf_t *lmcf, lua_State *L)
 
         lua_pushcfunction(L, ngx_http_lua_shdict_get_keys);
         lua_setfield(L, -2, "get_keys");
+
+        lua_pushcfunction(L, ngx_http_lua_shdict_get_stats);
+        lua_setfield(L, -2, "get_stats");
 
         lua_pushvalue(L, -1); /* shared mt mt */
         lua_setfield(L, -2, "__index"); /* shared mt */
@@ -2845,5 +2849,73 @@ ngx_http_lua_ffi_shdict_flush_all(ngx_shm_zone_t *zone)
 }
 #endif /* NGX_LUA_NO_FFI_API */
 
+
+static int
+ngx_http_lua_shdict_get_stats(lua_State *L)
+{
+    ngx_http_lua_shdict_ctx_t   *ctx;
+    ngx_shm_zone_t              *zone;
+    ngx_slab_stat_t             *stats;
+    int                          n;
+    int                          n_slots;
+    int                          slot;
+    int                          size;
+
+    n = lua_gettop(L);
+
+    if (n != 1) {
+        return luaL_error(L, "expecting 1 argument, "
+                          "but saw %d", n);
+    }
+
+    luaL_checktype(L, 1, LUA_TTABLE);
+
+    zone = ngx_http_lua_shdict_get_zone(L, 1);
+    if (zone == NULL) {
+        return luaL_error(L, "bad user data for the ngx_shm_zone_t pointer");
+    }
+
+    ctx = zone->data;
+
+    ngx_shmtx_lock(&ctx->shpool->mutex);
+
+    n_slots = ngx_pagesize_shift - ctx->shpool->min_shift;
+    lua_createtable(L, n_slots, 0);
+
+    size = ctx->shpool->min_size;
+    stats = ctx->shpool->stats;
+    for (slot = 0; slot < n_slots; slot++) {
+        lua_createtable(L, 0, 5);
+
+        lua_pushstring(L, "size");
+        lua_pushnumber(L, size);
+        lua_rawset(L, -3);
+
+        lua_pushstring(L, "total");
+        lua_pushnumber(L, stats[slot].total);
+        lua_rawset(L, -3);
+
+        lua_pushstring(L, "used");
+        lua_pushnumber(L, stats[slot].used);
+        lua_rawset(L, -3);
+
+        lua_pushstring(L, "reqs");
+        lua_pushnumber(L, stats[slot].reqs);
+        lua_rawset(L, -3);
+
+        lua_pushstring(L, "fails");
+        lua_pushnumber(L, stats[slot].fails);
+        lua_rawset(L, -3);
+
+        lua_rawseti(L, -2, slot + 1);
+
+        size <<= 1;
+    }
+
+    ngx_shmtx_unlock(&ctx->shpool->mutex);
+
+    /* table is at top of stack */
+    return 1;
+}
 
 /* vi:set ft=c ts=4 sw=4 et fdm=marker: */
