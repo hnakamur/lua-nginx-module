@@ -2843,6 +2843,39 @@ ngx_http_lua_ffi_shdict_flush_all(ngx_shm_zone_t *zone)
 
     return NGX_OK;
 }
+
+
+int
+ngx_http_lua_ffi_shdict_get_stats_slot_count(ngx_shm_zone_t *zone,
+    size_t *slot_count)
+{
+    ngx_http_lua_shdict_ctx_t   *ctx;
+
+    ctx = zone->data;
+
+    ngx_shmtx_lock(&ctx->shpool->mutex);
+    *slot_count = ngx_pagesize_shift - ctx->shpool->min_shift;
+    ngx_shmtx_unlock(&ctx->shpool->mutex);
+
+    return NGX_OK;
+}
+
+
+int
+ngx_http_lua_ffi_shdict_get_stats_slots_and_min_size(ngx_shm_zone_t *zone,
+    size_t slot_count, ngx_slab_stat_t *stats, size_t *slot_min_size)
+{
+    ngx_http_lua_shdict_ctx_t   *ctx;
+
+    ctx = zone->data;
+
+    ngx_shmtx_lock(&ctx->shpool->mutex);
+    ngx_memcpy(stats, ctx->shpool->stats, sizeof(ngx_slab_stat_t) * slot_count);
+    *slot_min_size = ctx->shpool->min_size;
+    ngx_shmtx_unlock(&ctx->shpool->mutex);
+
+    return NGX_OK;
+}
 #endif /* NGX_LUA_NO_FFI_API */
 
 
