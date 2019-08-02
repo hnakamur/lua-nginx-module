@@ -5268,6 +5268,7 @@ The resulting object <code>dict</code> has the following methods:
 * [[#ngx.shared.DICT.add|add]]
 * [[#ngx.shared.DICT.safe_add|safe_add]]
 * [[#ngx.shared.DICT.replace|replace]]
+* [[#ngx.shared.DICT.update|update]]
 * [[#ngx.shared.DICT.delete|delete]]
 * [[#ngx.shared.DICT.incr|incr]]
 * [[#ngx.shared.DICT.lpush|lpush]]
@@ -5465,6 +5466,34 @@ Just like the [[#ngx.shared.DICT.set|set]] method, but only stores the key-value
 If the <code>key</code> argument does ''not'' exist in the dictionary (or expired already), the <code>success</code> return value will be <code>false</code> and the <code>err</code> return value will be <code>"not found"</code>.
 
 This feature was first introduced in the <code>v0.3.1rc22</code> release.
+
+See also [[#ngx.shared.DICT|ngx.shared.DICT]].
+
+
+== ngx.shared.DICT.update ==
+'''syntax:''' ''success, err, forcible = ngx.shared.DICT:update(key, new_value_func, exptime?, flags?)''
+
+''cancel, new_value = new_value_func(old_value)''
+
+'''context:''' ''init_by_lua*, set_by_lua*, rewrite_by_lua*, access_by_lua*, content_by_lua*, header_filter_by_lua*, body_filter_by_lua*, log_by_lua*, ngx.timer.*, balancer_by_lua*, ssl_certificate_by_lua*, ssl_session_fetch_by_lua*, ssl_session_store_by_lua*''
+
+Just like the [[#ngx.shared.DICT.set|set]] method, but the new value can be calculated based on the old value for the <code>key</code>.
+
+If the <code>key</code> argument does ''not'' exist in the dictionary (or expired already), the <code>nil</code> will be passed as <code>old_value</code> to <code>new_value_func</code>.
+
+If the <code>cancel</code> is <code>false</code> and the <code>new_value</code> is not <code>nil</code>, the <code>new_value</code> will be set to the dictionary, the <code>ngx.shared.DICT:update</code> returns <code>"updated"</code> as <code>success</code>, <code>nil</code> as <code>err</code>, and <code>forcible</code> when successfully set, <code>nil</code> as <code>success</code> and <code>err</code> otherwise.
+
+If the <code>cancel</code> is <code>false</code> and the <code>new_value</code> is <code>nil</code>, the key will be removed from the dictionary, the <code>ngx.shared.DICT:update</code> returns <code>"removed"</code> as <code>success</code>, <code>nil</code> as <code>err</code>, and <code>false</code> as <code>forcible</code> when successfully removed, <code>nil</code> as <code>success</code> and <code>err</code> otherwise.
+
+If the <code>cancel</code> is <code>true</code>, the update will be canceled and the value will stay the same, the <code>ngx.shared.DICT:update</code> returns <code>"canceled"</code> as <code>success</code>, <code>nil</code> as <code>err</code>, and <code>false</code> as <code>forcible</code>.
+
+If the <code>cancel</code> is <code>nil</code>, the <code>new_value_func</code> is supposed to return <code>err</code> as <code>new_value</code>, the <code>ngx.shared.DICT:update</code> returns <code>nil</code> as <code>success</code> and <code>err</code> from <code>upate_function</code> as <code>err</code>.
+
+'''Note:''' The dictionary will be locked during this method while getting the old value and setting the new value, so this mehod is free from race condition, unlike successive calls of [[#ngx.shared.DICT.get|get]] method and [[#ngx.shared.DICT.set|set]] method.
+
+'''CAUTION''' Avoid long calculations in <code>new_value_func</code>, as it may lock the dictionary for significant amount of time and block Nginx worker processes trying to access the dictionary.
+
+This feature was first introduced in the <code>v0.10.16rc1</code> release.
 
 See also [[#ngx.shared.DICT|ngx.shared.DICT]].
 

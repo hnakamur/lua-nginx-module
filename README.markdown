@@ -3213,6 +3213,7 @@ Nginx API for Lua
 * [ngx.shared.DICT.add](#ngxshareddictadd)
 * [ngx.shared.DICT.safe_add](#ngxshareddictsafe_add)
 * [ngx.shared.DICT.replace](#ngxshareddictreplace)
+* [ngx.shared.DICT.update](#ngxshareddictupdate)
 * [ngx.shared.DICT.delete](#ngxshareddictdelete)
 * [ngx.shared.DICT.incr](#ngxshareddictincr)
 * [ngx.shared.DICT.lpush](#ngxshareddictlpush)
@@ -6275,6 +6276,7 @@ The resulting object `dict` has the following methods:
 * [add](#ngxshareddictadd)
 * [safe_add](#ngxshareddictsafe_add)
 * [replace](#ngxshareddictreplace)
+* [update](#ngxshareddictupdate)
 * [delete](#ngxshareddictdelete)
 * [incr](#ngxshareddictincr)
 * [lpush](#ngxshareddictlpush)
@@ -6499,6 +6501,37 @@ Just like the [set](#ngxshareddictset) method, but only stores the key-value pai
 If the `key` argument does *not* exist in the dictionary (or expired already), the `success` return value will be `false` and the `err` return value will be `"not found"`.
 
 This feature was first introduced in the `v0.3.1rc22` release.
+
+See also [ngx.shared.DICT](#ngxshareddict).
+
+
+[Back to TOC](#nginx-api-for-lua)
+
+ngx.shared.DICT.update
+----------------------
+**syntax:** *success, err, forcible = ngx.shared.DICT:update(key, new_value_func, exptime?, flags?)*
+
+*cancel, new_value = new_value_func(old_value)*
+
+**context:** *init_by_lua&#42;, set_by_lua&#42;, rewrite_by_lua&#42;, access_by_lua&#42;, content_by_lua&#42;, header_filter_by_lua&#42;, body_filter_by_lua&#42;, log_by_lua&#42;, ngx.timer.&#42;, balancer_by_lua&#42;, ssl_certificate_by_lua&#42;, ssl_session_fetch_by_lua&#42;, ssl_session_store_by_lua&#42;*
+
+Just like the [set](#ngxshareddictset) method, but the new value can be calculated based on the old value for the `key`.
+
+If the `key` argument does *not* exist in the dictionary (or expired already), the `nil` will be passed as `old_value` to `new_value_func`.
+
+If the `cancel` is `false` and the `new_value` is not `nil`, the `new_value` will be set to the dictionary, the `ngx.shared.DICT:update` returns `"updated"` as `success`, `nil` as `err`, and `forcible` when successfully set, `nil` as `success` and `err` otherwise.
+
+If the `cancel` is `false` and the `new_value` is `nil`, the key will be removed from the dictionary, the `ngx.shared.DICT:update` returns `"removed"` as `success`, `nil` as `err`, and `false` as `forcible` when successfully removed, `nil` as `success` and `err` otherwise.
+
+If the `cancel` is `true`, the update will be canceled and the value will stay the same, the `ngx.shared.DICT:update` returns `"canceled"` as `success`, `nil` as `err`, and `false` as `forcible`.
+
+If the `cancel` is `nil`, the `new_value_func` is supposed to return `err` as `new_value`, the `ngx.shared.DICT:update` returns `nil` as `success` and `err` from `upate_function` as `err`.
+
+**Note:** The dictionary will be locked during this method while getting the old value and setting the new value, so this mehod is free from race condition, unlike successive calls of [get](#ngxshareddictget) method and [set](#ngxshareddictset) method.
+
+**CAUTION** Avoid long calculations in `new_value_func`, as it may lock the dictionary for significant amount of time and block Nginx worker processes trying to access the dictionary.
+
+This feature was first introduced in the `v0.10.16rc1` release.
 
 See also [ngx.shared.DICT](#ngxshareddict).
 
