@@ -2323,10 +2323,6 @@ ngx_http_lua_shdict_update_helper(lua_State *L, int flags)
 
     ngx_shmtx_lock(&ctx->shpool->mutex);
 
-#if 1
-    ngx_http_lua_shdict_expire(ctx, 1);
-#endif
-
     rc = ngx_http_lua_shdict_lookup(zone, hash, key.data, key.len, &sd);
 
     dd("shdict lookup returned %d", (int) rc);
