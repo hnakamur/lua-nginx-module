@@ -296,3 +296,40 @@ nil my error nil
 32 number
 --- no_error_log
 [error]
+
+
+
+=== TEST 9: string key, string value
+--- http_config
+    lua_shared_dict dogs 1m;
+--- config
+    location = /test {
+        content_by_lua '
+            local dogs = ngx.shared.dogs
+            local succ, err, forcible = dogs:update("foo", function(v)
+              ngx.say(v, " ", type(v))
+              return false, "hello"
+            end)
+            ngx.say(succ, " ", err, " ", forcible)
+            local val = dogs:get("foo")
+            ngx.say(val, " ", type(val))
+            succ, err, forcible = dogs:update("foo", function(v)
+              ngx.say(v, " ", type(v))
+              return false, v .. " world"
+            end)
+            ngx.say(succ, " ", err, " ", forcible)
+            val = dogs:get("foo")
+            ngx.say(val, " ", type(val))
+        ';
+    }
+--- request
+GET /test
+--- response_body
+nil nil
+updated nil false
+hello string
+hello string
+updated nil false
+hello world string
+--- no_error_log
+[error]
