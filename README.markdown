@@ -6529,7 +6529,7 @@ If the `cancel` is `nil`, the `new_value_func` is supposed to return `err` as `n
 
 **Note:** The dictionary will be locked during this method while getting the old value and setting the new value, so this mehod is free from race condition, unlike successive calls of [get](#ngxshareddictget) method and [set](#ngxshareddictset) method.
 
-**CAUTION** Avoid long calculations in `new_value_func`, as it may lock the dictionary for significant amount of time and block Nginx worker processes trying to access the dictionary.
+**CAUTION** Avoid accessing the same dictionary in `new_value_func`, as it causes a DEAD LOCK. Also avoid long calculations in `new_value_func`, as it may lock the dictionary for significant amount of time and block Nginx worker processes trying to access the dictionary.
 
 This feature was first introduced in the `v0.10.16rc1` release.
 

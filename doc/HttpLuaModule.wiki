@@ -5491,7 +5491,7 @@ If the <code>cancel</code> is <code>nil</code>, the <code>new_value_func</code> 
 
 '''Note:''' The dictionary will be locked during this method while getting the old value and setting the new value, so this mehod is free from race condition, unlike successive calls of [[#ngx.shared.DICT.get|get]] method and [[#ngx.shared.DICT.set|set]] method.
 
-'''CAUTION''' Avoid long calculations in <code>new_value_func</code>, as it may lock the dictionary for significant amount of time and block Nginx worker processes trying to access the dictionary.
+'''CAUTION''' Avoid accessing the same dictionary in <code>new_value_func</code>, as it causes a DEAD LOCK. Also avoid long calculations in <code>new_value_func</code>, as it may lock the dictionary for significant amount of time and block Nginx worker processes trying to access the dictionary.
 
 This feature was first introduced in the <code>v0.10.16rc1</code> release.
 
