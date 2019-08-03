@@ -271,7 +271,7 @@ canceled nil false
 
 
 
-=== TEST 7: string key, return some error
+=== TEST 8: string key, return some error
 --- http_config
     lua_shared_dict dogs 1m;
 --- config
